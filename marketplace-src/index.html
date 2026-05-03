@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dat.Trade — Техническое освещение</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header class="dt-header">
+    <div class="logo">
+      <h1>Dat.Trade</h1>
+      <span class="subtitle">Техническое освещение</span>
+    </div>
+    <nav>
+      <button id="catalogBtn" class="nav-btn active">Каталог</button>
+      <button id="cartBtn" class="nav-btn">🛒 Корзина <span id="cartCount">0</span></button>
+      <button id="accountBtn" class="nav-btn">👤 <span id="accountLabel">Войти</span></button>
+    </nav>
+  </header>
+
+  <main id="mainContent"><!-- рендерится через JS --></main>
+
+  <!-- Модальное окно авторизации / регистрации -->
+  <div id="authModal" class="modal" style="display:none;">
+    <div class="modal-content dt-card">
+      <span class="close-auth">&times;</span>
+      <div id="authForm">
+        <h3>Вход или регистрация</h3>
+        <p>Введите номер телефона и пароль. Если вы еще не зарегистрированы, будет создан аккаунт.</p>
+        <input type="tel" id="authPhone" placeholder="Номер телефона, например 77071234567" class="dt-input">
+        <input type="password" id="authPassword" placeholder="Пароль" class="dt-input">
+        <button onclick="loginOrRegister()" class="dt-btn primary full-width">Продолжить</button>
+        <div id="authError" class="error"></div>
+        <p class="hint">После входа номер станет вашим идентификатором.</p>
+      </div>
+      <div id="authProfile" style="display:none;">
+        <h3>Вы вошли как <span id="profilePhone"></span></h3>
+        <p>Сумма покупок: <span id="profileTotal"></span> ₸</p>
+        <p>Персональная скидка: <span id="profileDiscount"></span></p>
+        <button onclick="logoutCustomer()" class="dt-btn">Выйти</button>
+      </div>
+    </div>
+  </div>
+
+  <footer class="dt-footer">
+    <div class="footer-content">
+      <div class="footer-info">
+        <h4>Dat.Trade</h4>
+        <p>Техническое освещение – склад и самовывоз</p>
+        <p>📞 +7 (707) 123-45-67</p>
+        <p>📍 проспект Богенбай Батыра 16/1, г. Астана</p>
+      </div>
+      <div class="footer-map">
+        <iframe
+          src="https://yandex.ru/map-widget/v1/?ll=71.4305%2C51.1282&z=16&pt=71.4305,51.1282,pm2rdl&l=map"
+          loading="lazy"
+          style="border:0; width:100%; height:200px;">
+        </iframe>
+      </div>
+    </div>
+  </footer>
+
+  <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

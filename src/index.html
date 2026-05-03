@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+  <title>Inventory EXPOSTROY</title>
+  <meta name="description" content="Система учёта товаров EXPOSTROY">
+  <link rel="stylesheet" href="style.css">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+</head>
+<body>
+<div id="loginContainer" class="login-overlay">
+  <div class="login-card">
+    <h2> Вход в систему</h2>
+    <input type="text" id="loginUsername" placeholder="Логин">
+    <input type="password" id="loginPassword" placeholder="Пароль">
+    <button onclick="doLogin()">Войти</button>
+  </div>
+</div>
+
+<div id="appContainer" style="display: none;">
+  <div class="container">
+    <h1 class="loft-title">СКЛАД EXPOSTROY </h1>
+    <div class="user-info">
+      👤 <span id="userRole"></span>
+      <button id="themeToggle" title="Сменить тему">🎨 Тема</button>
+      <button onclick="doLogout()">Выйти</button>
+    </div>
+    <div class="tabs" id="tabsContainer"></div>
+    <div id="tabContents"></div>
+  </div>
+</div>
+
+<!-- Drawer для деталей товара -->
+<div id="productDrawer" class="drawer">
+  <div class="drawer-content">
+    <span class="drawer-close">&times;</span>
+    <div id="drawerPhoto"><img src="" alt="Фото" style="width:100%; border-radius:12px;"></div>
+    <h3 id="drawerName"></h3>
+    <p><strong>Артикул:</strong> <span id="drawerSku"></span></p>
+    <p><strong>Цена:</strong> <span id="drawerPrice"></span> ₸</p>
+    <p><strong>Остаток:</strong> <span id="drawerStock"></span></p>
+    <div id="drawerDescriptionBlock">
+      <strong>Описание:</strong>
+      <div id="drawerDescription" style="margin-top:5px; padding:8px; background:#1f1b16; border-radius:8px;"></div>
+      <div id="editDescriptionArea" style="display:none; margin-top:10px;">
+        <textarea id="editDescriptionText" rows="4" style="width:100%; background:#1e1b17; color:#f0e2c5; border:1px solid #b87c4f; border-radius:8px; padding:8px;"></textarea>
+        <div style="margin-top:8px;">
+          <button onclick="saveDescription()" style="background:#4d6b3a;">💾 Сохранить</button>
+          <button onclick="cancelEditDescription()" style="margin-left:10px;">Отмена</button>
+        </div>
+      </div>
+      <button id="editDescriptionBtn" class="upload-photo-btn" onclick="enableEditDescription()" style="display:none; margin-top:10px;">✏️ Редактировать описание</button>
+    </div>
+    <div style="margin-top:20px;">
+      <strong>QR-код товара:</strong>
+      <div id="qrcode" style="margin-top:8px; display:flex; justify-content:center;"></div>
+    </div>
+    <button id="uploadPhotoBtn" class="upload-photo-btn" onclick="uploadProductPhoto()" style="margin-top:15px;">📷 Загрузить фото</button>
+    <input type="file" id="photoUploadInput" accept="image/*" style="display:none">
+  </div>
+</div>
+
+<!-- Модальное окно редактирования продажи -->
+<div id="editSaleModal" class="modal">
+  <div class="modal-content">
+    <span class="close">&times;</span>
+    <h3>✏️ Редактировать продажу</h3>
+    <input type="datetime-local" id="editSaleDatetime">
+    <div id="editCartItems"></div>
+    <div class="total-row">Итого: <span id="editCartTotal">0</span> ₸</div>
+    <button class="btn-success" onclick="updateSale()">💾 Сохранить</button>
+  </div>
+</div>
+
+<!-- Модальное окно редактирования товара -->
+<div id="editProductModal" class="modal">
+  <div class="modal-content">
+    <span class="close-edit-product">&times;</span>
+    <h3>✏️ Редактировать товар</h3>
+    <input type="hidden" id="editProductId">
+    <div class="form-row">
+      <input type="text" id="editProdName" placeholder="Название">
+      <input type="text" id="editProdSku" placeholder="Артикул">
+      <input type="text" id="editProdBarcode" placeholder="Штрихкод">
+    </div>
+    <div class="form-row">
+      <input type="number" id="editProdPrice" placeholder="Цена (₸)" step="0.01">
+    </div>
+    <div class="form-row">
+      <textarea id="editProdDescription" rows="3" placeholder="Описание товара"></textarea>
+    </div>
+    <select id="editProdCategory">
+      <option value="">-- Категория --</option>
+    </select>
+    <div class="form-row">
+      <label>Фото товара:</label>
+      <div id="editProductPhotoPreview" style="margin:10px 0;">
+        <img id="editProductPhotoImg" src="" alt="Фото" style="max-width:200px; max-height:200px; border-radius:8px;">
+      </div>
+      <input type="file" id="editProductPhoto" accept="image/*">
+      <button id="uploadEditPhotoBtn" class="btn-success">📷 Загрузить новое фото</button>
+    </div>
+    <div style="display: flex; gap: 10px; justify-content: flex-end; margin-top: 20px;">
+      <button onclick="closeEditProductModal()">Отмена</button>
+      <button class="btn-success" onclick="saveProductEdit()">💾 Сохранить</button>
+    </div>
+  </div>
+</div>
+
+<!-- Модальное окно создания категории -->
+<div id="newCategoryModal" class="modal">
+  <div class="modal-content">
+    <span class="close-new-category">&times;</span>
+    <h3>📁 Новая категория</h3>
+    <input type="text" id="newCategoryName" placeholder="Название категории" style="width:100%;">
+    <div style="margin-top:20px; display:flex; gap:10px; justify-content:flex-end;">
+      <button onclick="closeNewCategoryModal()">Отмена</button>
+      <button class="btn-success" onclick="createNewCategory()">Создать</button>
+    </div>
+  </div>
+</div>
+
+<!-- Модальное окно для самовывоза (ручной ввод токена / детали заказа) -->
+<div id="pickupModal" class="modal" style="display:none;">
+  <div class="modal-content">
+    <span class="close-pickup">&times;</span>
+    <h3>🔍 Заказ на самовывоз</h3>
+    <input type="text" id="pickupTokenInput" placeholder="Токен из QR-кода" style="width:100%; margin-bottom:15px;">
+    <button onclick="lookupPickupOrder()">Найти заказ</button>
+    <div id="pickupOrderDetails" style="margin-top:20px;"></div>
+  </div>
+</div>
+
+<script src="app.js"></script>
+</body>
+</html>

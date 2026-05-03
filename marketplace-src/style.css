@@ -1,0 +1,243 @@
+:root {
+  --bg: #f9f9fb;
+  --surface: #ffffff;
+  --text: #222;
+  --text-light: #666;
+  --border: #e0e0e0;
+  --accent: #2c3e50;
+  --accent-light: #34495e;
+  --primary-btn: #3498db;
+  --primary-btn-hover: #2980b9;
+  --danger: #e74c3c;
+  --success: #27ae60;
+  --radius: 10px;
+  --shadow: 0 2px 12px rgba(0,0,0,0.08);
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+body {
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Шапка */
+.dt-header {
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  padding: 16px 30px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  box-shadow: var(--shadow);
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+.logo h1 {
+  font-size: 24px;
+  font-weight: 700;
+  color: var(--accent);
+  margin: 0;
+  letter-spacing: 1px;
+}
+.subtitle {
+  font-size: 13px;
+  color: var(--text-light);
+  font-weight: 400;
+}
+.nav-btn {
+  background: none;
+  border: none;
+  font-size: 15px;
+  color: var(--text);
+  cursor: pointer;
+  padding: 8px 16px;
+  border-radius: 20px;
+  margin-left: 10px;
+  transition: 0.2s;
+}
+.nav-btn.active, .nav-btn:hover {
+  background: var(--accent);
+  color: white;
+}
+#cartCount {
+  background: var(--danger);
+  color: white;
+  border-radius: 50%;
+  padding: 2px 7px;
+  font-size: 12px;
+  margin-left: 4px;
+}
+
+/* Карточки и сетка */
+.products-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+  gap: 20px;
+  padding: 30px;
+}
+.product-card {
+  background: var(--surface);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  overflow: hidden;
+  transition: 0.2s;
+  display: flex;
+  flex-direction: column;
+}
+.product-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 8px 20px rgba(0,0,0,0.12);
+}
+.product-card img {
+  width: 100%;
+  height: 200px;
+  object-fit: cover;
+  border-bottom: 1px solid var(--border);
+}
+.product-info {
+  padding: 15px;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+.product-info h3 {
+  font-size: 16px;
+  margin-bottom: 6px;
+  color: var(--accent);
+}
+.price {
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--text);
+}
+.stock {
+  color: var(--text-light);
+  font-size: 13px;
+}
+.add-to-cart {
+  margin-top: auto;
+  width: 100%;
+  background: var(--primary-btn);
+  color: white;
+  border: none;
+  padding: 10px;
+  border-radius: 20px;
+  cursor: pointer;
+  font-weight: 500;
+  transition: 0.2s;
+}
+.add-to-cart:hover {
+  background: var(--primary-btn-hover);
+}
+
+/* Корзина */
+.cart-container {
+  max-width: 700px;
+  margin: 30px auto;
+  padding: 0 20px;
+}
+.cart-item {
+  background: var(--surface);
+  border-radius: var(--radius);
+  padding: 15px;
+  margin-bottom: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  box-shadow: var(--shadow);
+}
+.cart-item input[type="number"] {
+  width: 60px;
+  padding: 6px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+}
+.total {
+  font-size: 22px;
+  font-weight: bold;
+  text-align: right;
+  margin: 20px 0;
+}
+.checkout-btn {
+  width: 100%;
+  background: var(--success);
+  color: white;
+  border: none;
+  padding: 14px;
+  border-radius: var(--radius);
+  font-size: 16px;
+  cursor: pointer;
+}
+
+/* QR */
+.qr-container {
+  text-align: center;
+  padding: 40px 20px;
+}
+.qr-container h2 { margin-bottom: 20px; }
+#qrcode { display: inline-block; background: white; padding: 15px; border-radius: 12px; }
+
+/* Модалка */
+.modal {
+  position: fixed;
+  top:0; left:0; width:100%; height:100%;
+  background: rgba(0,0,0,0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 200;
+}
+.dt-card {
+  background: white;
+  border-radius: var(--radius);
+  padding: 30px;
+  width: 90%;
+  max-width: 400px;
+  box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+}
+.dt-input {
+  width: 100%;
+  padding: 12px;
+  margin-bottom: 15px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  font-size: 14px;
+}
+.dt-btn {
+  padding: 10px 20px;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 500;
+}
+.primary { background: var(--primary-btn); color: white; }
+.full-width { width: 100%; }
+.error { color: var(--danger); margin-top: 8px; }
+.hint { font-size: 12px; color: var(--text-light); margin-top: 10px; }
+
+/* Подвал */
+.dt-footer {
+  background: var(--surface);
+  border-top: 1px solid var(--border);
+  margin-top: auto;
+  padding: 30px;
+}
+.footer-content {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 30px;
+  max-width: 1200px;
+  margin: 0 auto;
+  justify-content: space-between;
+}
+.footer-info p { margin: 6px 0; color: var(--text-light); }
+.footer-map { flex: 1; min-width: 280px; }
