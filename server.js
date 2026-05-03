@@ -4,7 +4,7 @@ const cors = require("cors");
 const multer = require("multer");
 const path = require("path");
 const fs = require("fs");
-const bcrypt = require("bcrypt");
+const bcrypt = require("bcryptjs");
 const session = require("express-session");
 const crypto = require("crypto");
 
@@ -23,12 +23,11 @@ const uploadDir = path.join(__dirname, "uploads");
 if (!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir, { recursive: true });
 app.use("/uploads", express.static(uploadDir));
 
-// Раздача админ-панели
+// Раздача статики
 const distDir = path.join(__dirname, "dist");
 if (!fs.existsSync(distDir)) fs.mkdirSync(distDir, { recursive: true });
 app.use(express.static(distDir));
 
-// Раздача витрины маркетплейса
 const marketDist = path.join(__dirname, "marketplace-dist");
 if (!fs.existsSync(marketDist)) fs.mkdirSync(marketDist, { recursive: true });
 app.use("/market", express.static(marketDist));
@@ -47,7 +46,10 @@ const upload = multer({ storage, limits: { fileSize: 5 * 1024 * 1024 } });
 const db = new sqlite3.Database("./database.db");
 
 db.serialize(() => {
-  // Таблицы
+  // Удаляем старую таблицу users с неправильным CHECK
+  db.run(`DROP TABLE IF EXISTS users`);
+
+  // Создаём заново с правильным CHECK
   db.run(`CREATE TABLE IF NOT EXISTS users (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     username TEXT UNIQUE NOT NULL,
@@ -58,6 +60,7 @@ db.serialize(() => {
     discount_enabled INTEGER DEFAULT 0
   )`);
 
+  // Остальные таблицы остаются без изменений
   db.run(`CREATE TABLE IF NOT EXISTS categories (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     name TEXT NOT NULL UNIQUE
@@ -124,10 +127,7 @@ db.serialize(() => {
     FOREIGN KEY (product_id) REFERENCES products(id)
   )`);
 
-  // Совместимость со старыми базами
-  db.run(`ALTER TABLE users ADD COLUMN phone TEXT`, () => {});
-  db.run(`ALTER TABLE users ADD COLUMN total_spent REAL DEFAULT 0`, () => {});
-  db.run(`ALTER TABLE users ADD COLUMN discount_enabled INTEGER DEFAULT 0`, () => {});
+  // ALTER для совместимости (теперь не нужно для users, но оставим для других таблиц)
   db.run(`ALTER TABLE products ADD COLUMN barcode TEXT`, () => {});
   db.run(`ALTER TABLE products ADD COLUMN category_id INTEGER`, () => {});
   db.run(`ALTER TABLE sales ADD COLUMN user_id INTEGER DEFAULT 1`, () => {});
@@ -144,10 +144,9 @@ db.serialize(() => {
   // Администратор по умолчанию
   db.get("SELECT COUNT(*) as cnt FROM users", [], async (err, row) => {
     if (!err && row && row.cnt === 0) {
-      try {
-        const hash = await bcrypt.hash("admin123", 10);
-        db.run("INSERT INTO users (username, password, role) VALUES (?, ?, ?)", ["admin", hash, "admin"]);
-      } catch (err) {}
+      const hash = await bcrypt.hash("admin123", 10);
+      db.run("INSERT INTO users (username, password, role) VALUES (?, ?, ?)", ["admin", hash, "admin"]);
+      console.log("Создан администратор admin / admin123");
     }
   });
 });
@@ -159,7 +158,7 @@ function isAuthenticated(req, res, next) {
 }
 function isAdmin(req, res, next) {
   if (req.session.user?.role === "admin") return next();
-  res.status(403).json({ error: "Доступ только администраторам" });
+  res.status(403).json({ error: "Только для администратора" });
 }
 function isStaff(req, res, next) {
   if (req.session.user?.role === "admin" || req.session.user?.role === "seller") return next();
@@ -188,25 +187,27 @@ app.get("/api/me", (req, res) => {
   else res.status(401).json({ error: "Не авторизован" });
 });
 
-// ========== РЕГИСТРАЦИЯ ПОКУПАТЕЛЯ ==========
+// ========== РЕГИСТРАЦИЯ ==========
 app.post("/api/market/register", async (req, res) => {
-  const { phone, password } = req.body;
-  if (!phone || !password) return res.status(400).json({ error: "Номер телефона и пароль обязательны" });
-  const cleanPhone = phone.replace(/\D/g, "");
-  if (cleanPhone.length < 10) return res.status(400).json({ error: "Введите корректный номер телефона" });
-
   try {
+    const { phone, password } = req.body;
+    if (!phone || !password) return res.status(400).json({ error: "Номер телефона и пароль обязательны" });
+    const cleanPhone = phone.replace(/\D/g, "");
+    if (cleanPhone.length < 10) return res.status(400).json({ error: "Введите корректный номер телефона" });
+
     const hash = await bcrypt.hash(password, 10);
     db.run("INSERT INTO users (username, password, role, phone) VALUES (?, ?, 'customer', ?)", [cleanPhone, hash, cleanPhone], function(err) {
       if (err) {
+        console.error("Ошибка регистрации:", err);
         if (err.message.includes("UNIQUE constraint")) return res.status(400).json({ error: "Этот номер уже зарегистрирован" });
         return res.status(500).json({ error: "Ошибка регистрации" });
       }
       req.session.user = { id: this.lastID, username: cleanPhone, role: "customer" };
       res.json({ success: true });
     });
-  } catch (err) {
-    res.status(500).json({ error: "Ошибка сервера" });
+  } catch (e) {
+    console.error("Исключение в регистрации:", e);
+    res.status(500).json({ error: "Внутренняя ошибка сервера" });
   }
 });
 
@@ -224,7 +225,7 @@ app.get("/api/market/customers", isStaff, (req, res) => {
   db.all("SELECT id, username as phone, total_spent, discount_enabled FROM users WHERE role = 'customer' ORDER BY id", [], (err, rows) => res.json(rows || []));
 });
 
-// ========== ПЕРЕКЛЮЧЕНИЕ СКИДКИ (персонал) ==========
+// ========== ПЕРЕКЛЮЧЕНИЕ СКИДКИ ==========
 app.post("/api/market/customers/:id/toggle-discount", isStaff, (req, res) => {
   const customerId = req.params.id;
   db.get("SELECT discount_enabled FROM users WHERE id = ? AND role = 'customer'", [customerId], (err, user) => {
@@ -452,7 +453,7 @@ app.delete("/api/sales/:id", isAuthenticated, isAdmin, (req, res) => {
   });
 });
 
-// ========== УПРАВЛЕНИЕ ПОЛЬЗОВАТЕЛЯМИ (старое) ==========
+// ========== ПОЛЬЗОВАТЕЛИ (старый функционал) ==========
 app.get("/api/users", isAuthenticated, isAdmin, (req, res) => {
   db.all("SELECT id, username, role FROM users WHERE role IN ('admin', 'seller')", [], (err, rows) => res.json(rows));
 });
@@ -494,7 +495,7 @@ app.delete("/api/users/:id", isAuthenticated, isAdmin, (req, res) => {
   });
 });
 
-// ========== ОТЧЁТЫ (дашборд) ==========
+// ========== ОТЧЁТЫ ==========
 app.get("/api/reports/dashboard", isAuthenticated, isAdmin, (req, res) => {
   db.get("SELECT COUNT(*) as totalProducts, SUM(stock) as totalStock, SUM(price * stock) as totalValue FROM products", [], (err, productStats) => {
     const now = new Date();
@@ -521,12 +522,22 @@ app.get("/api/reports/dashboard", isAuthenticated, isAdmin, (req, res) => {
 // ========== МАРКЕТПЛЕЙС: ПУБЛИЧНЫЕ ==========
 app.get("/api/market/products", (req, res) => {
   db.all("SELECT id, name, price, photo, description, stock, category_id, sku FROM products WHERE stock > 0 ORDER BY name", [], (err, rows) => {
-    if (err) return res.status(500).json({ error: err.message });
+    if (err) {
+      console.error("Ошибка получения товаров:", err);
+      return res.status(500).json({ error: err.message });
+    }
     res.json(rows || []);
   });
 });
 
-// Создание заказа самовывоза (только для авторизованного покупателя)
+app.get("/api/market/products/:id", (req, res) => {
+  db.get("SELECT id, name, price, photo, description, stock, category_id, sku FROM products WHERE id = ?", [req.params.id], (err, row) => {
+    if (err || !row) return res.status(404).json({ error: "Товар не найден" });
+    res.json(row);
+  });
+});
+
+// Создание заказа (только для авторизованного покупателя)
 app.post("/api/market/orders", isAuthenticated, (req, res) => {
   if (req.session.user.role !== "customer") return res.status(403).json({ error: "Только для покупателей" });
   const customerId = req.session.user.id;
@@ -534,7 +545,7 @@ app.post("/api/market/orders", isAuthenticated, (req, res) => {
   if (!items || !items.length) return res.status(400).json({ error: "Нет товаров" });
 
   db.get("SELECT discount_enabled FROM users WHERE id = ?", [customerId], (err, user) => {
-    if (err || !user) return res.status(500).json({ error: "Ошибка получения данных покупателя" });
+    if (err || !user) return res.status(500).json({ error: "Ошибка данных покупателя" });
     const discount = user.discount_enabled ? 0.01 : 0;
 
     const ids = items.map(i => i.product_id);
@@ -577,8 +588,6 @@ app.post("/api/market/orders", isAuthenticated, (req, res) => {
 });
 
 // ========== МАРКЕТПЛЕЙС: ДЛЯ ПЕРСОНАЛА ==========
-
-// Список активных заказов с телефоном покупателя
 app.get("/api/market/orders", isStaff, (req, res) => {
   db.all(
     `SELECT pickup_orders.*, users.phone as customer_phone 
@@ -586,12 +595,10 @@ app.get("/api/market/orders", isStaff, (req, res) => {
      LEFT JOIN users ON pickup_orders.customer_id = users.id 
      WHERE pickup_orders.status = 'pending' 
      ORDER BY pickup_orders.created_at DESC`,
-    [],
-    (err, rows) => res.json(rows || [])
+    [], (err, rows) => res.json(rows || [])
   );
 });
 
-// Детали заказа по токену
 app.get("/api/market/orders/:token", isStaff, (req, res) => {
   const token = req.params.token;
   db.get("SELECT * FROM pickup_orders WHERE order_token = ?", [token], (err, order) => {
@@ -618,7 +625,7 @@ app.get("/api/market/orders/:token", isStaff, (req, res) => {
   });
 });
 
-// Завершить заказ (выдача товара)
+// Завершение заказа (выдача товара)
 app.post("/api/market/orders/:token/complete", isStaff, (req, res) => {
   const token = req.params.token;
   const staffId = req.session.user.id;
