@@ -1,7 +1,7 @@
 {
   "name": "expostroy",
   "version": "1.0.0",
-  "description": "Dat.Trade - техническое освещение, склад и маркетплейс самовывоза",
+  "description": "Dat.Trade — техническое освещение, склад и маркетплейс",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
@@ -18,9 +18,5 @@
     "multer": "^1.4.5-lts.1",
     "sqlite3": "^5.1.7",
     "terser": "^5.27.0"
-  },
-  "devDependencies": {},
-  "engines": {
-    "node": ">=16"
   }
 }
