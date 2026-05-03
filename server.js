@@ -10,7 +10,7 @@ const crypto = require("crypto");
 
 const app = express();
 app.use(express.json());
-app.use(cors({ origin: "http://localhost:3000", credentials: true }));
+app.use(cors({ origin: true, credentials: true }));
 app.use(session({
   secret: "loft-inventory-secret-2025",
   resave: false,
